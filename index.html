@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Book</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+
+  <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6">
+    <h1 class="text-3xl font-bold mb-4 text-center text-blue-600">Contact Book</h1>
+
+    <!-- Formulario -->
+    <form id="contactForm" class="space-y-4">
+      <div>
+        <label class="block font-medium">Nombre *</label>
+        <input required type="text" id="nombre" class="w-full border rounded px-3 py-2" />
+      </div>
+
+      <div>
+        <label class="block font-medium">Correo electrónico *</label>
+        <input required type="email" id="correo" class="w-full border rounded px-3 py-2" />
+      </div>
+
+      <div>
+        <label class="block font-medium">Contacto *</label>
+        <div class="flex space-x-2">
+          <select id="codigoPais" class="border rounded px-3 py-2">
+            <option value="+591">+591 (BO)</option>
+            <option value="+54">+54 (AR)</option>
+            <option value="+57">+57 (CO)</option>
+            <option value="+1">+1 (USA)</option>
+          </select>
+          <input required type="tel" id="telefono" placeholder="Número" class="flex-1 border rounded px-3 py-2" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-medium">LinkedIn</label>
+        <input type="url" id="linkedin" class="w-full border rounded px-3 py-2" placeholder="https://linkedin.com/in/usuario" />
+      </div>
+
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Guardar Contacto
+      </button>
+    </form>
+
+    <!-- Buscador -->
+    <div class="mt-8">
+      <input type="text" id="buscador" placeholder="Buscar contactos..." class="w-full border px-3 py-2 rounded" />
+    </div>
+
+    <!-- Tabla de contactos -->
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full border mt-2 text-sm text-left">
+        <thead class="bg-blue-100">
+          <tr>
+            <th class="p-2">Fecha</th>
+            <th class="p-2">Nombre</th>
+            <th class="p-2">Correo</th>
+            <th class="p-2">Contacto</th>
+            <th class="p-2">LinkedIn</th>
+          </tr>
+        </thead>
+        <tbody id="tablaContactos" class="bg-white divide-y"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("contactForm");
+    const tabla = document.getElementById("tablaContactos");
+    const buscador = document.getElementById("buscador");
+
+    let contactos = [];
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const nombre = document.getElementById("nombre").value;
+      const correo = document.getElementById("correo").value;
+      const codigo = document.getElementById("codigoPais").value;
+      const telefono = document.getElementById("telefono").value;
+      const linkedin = document.getElementById("linkedin").value;
+
+      const data = {
+        nombre,
+        correo,
+        telefono: `${codigo} ${telefono}`,
+        linkedin,
+        fecha: new Date().toISOString()
+      };
+
+      try {
+        const res = await fetch("http://localhost:3000/api/contacto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+          contactos.unshift(data); // Guardar en memoria
+          renderTabla();
+          form.reset();
+        } else {
+          alert("Error al guardar el contacto.");
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        alert("No se pudo conectar con el servidor.");
+      }
+    });
+
+    buscador.addEventListener("input", function () {
+      renderTabla(this.value.toLowerCase());
+    });
+
+    function renderTabla(filtro = "") {
+      tabla.innerHTML = "";
+      contactos
+        .filter(c =>
+          c.nombre.toLowerCase().includes(filtro) ||
+          c.correo.toLowerCase().includes(filtro) ||
+          c.telefono.toLowerCase().includes(filtro)
+        )
+        .forEach(c => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="p-2">${c.fecha}</td>
+            <td class="p-2">${c.nombre}</td>
+            <td class="p-2">${c.correo}</td>
+            <td class="p-2">${c.telefono}</td>
+            <td class="p-2">
+              ${c.linkedin ? `<a href="${c.linkedin}" class="text-blue-600 underline" target="_blank">Ver perfil</a>` : "-"}
+            </td>
+          `;
+          tabla.appendChild(row);
+        });
+    }
+  </script>
+</body>
+</html>
