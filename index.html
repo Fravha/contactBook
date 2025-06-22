@@ -51,6 +51,16 @@
       <input type="text" id="buscador" placeholder="Buscar contactos..." class="w-full border px-3 py-2 rounded" />
     </div>
 
+    <!-- Loader -->
+    <div id="loader" class="text-center text-gray-600 mt-4 hidden">
+      ⏳ Cargando contactos...
+    </div>
+
+    <!-- Mensaje de error -->
+    <div id="errorMsg" class="text-center text-red-500 mt-4 hidden">
+      ⚠️ No se pudo cargar la lista de contactos. Inténtalo más tarde.
+    </div>
+
     <!-- Tabla de contactos -->
     <div class="mt-4 overflow-x-auto">
       <table class="w-full border mt-2 text-sm text-left">
@@ -94,7 +104,7 @@
       };
 
       try {
-        const res = await fetch("https://contactbook-backend-9ei1.onrender.com", {
+        const res = await fetch("https://contactbook-backend-9ei1.onrender.com/api/contacto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
@@ -141,16 +151,26 @@
     }
 
     async function cargarContactosDesdeBackend() {
-    try {
-      const res = await fetch("https://contactos-flash-backend.onrender.com/api/contactos");
-      if (res.ok) {
-        contactos = await res.json();
-        renderTabla();
-      } else {
-        console.error("No se pudieron cargar los contactos");
-      }
+      const loader = document.getElementById("loader");
+      const errorMsg = document.getElementById("errorMsg");
+
+      loader.classList.remove("hidden");
+      errorMsg.classList.add("hidden");
+
+      try {
+        const res = await fetch("https://contactbook-backend-9ei1.onrender.com/api/contactos");
+        if (res.ok) {
+          contactos = await res.json();
+          renderTabla();
+        } else {
+          console.error("No se pudieron cargar los contactos");
+          errorMsg.classList.remove("hidden");
+        }
       } catch (err) {
         console.error("Error de conexión al backend:", err);
+        errorMsg.classList.remove("hidden");
+      } finally {
+        loader.classList.add("hidden");
       }
     }
   </script>
