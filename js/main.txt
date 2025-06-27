@@ -1,0 +1,275 @@
+// Inicializar Lucide icons
+lucide.createIcons();
+
+// Variables globales
+const form = document.getElementById("contactForm");
+const tabla = document.getElementById("tablaContactos");
+const buscador = document.getElementById("buscador");
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+let contactos = [];
+let sidebarOpen = false;
+
+// Event listeners
+sidebarToggle.addEventListener("click", toggleSidebar);
+sidebarOverlay.addEventListener("click", closeSidebar);
+
+// Navigation buttons
+document.getElementById("btnTodosContactos").addEventListener("click", () => showView("vistaContactos"));
+document.getElementById("btnFormulario").addEventListener("click", () => showView("vistaFormulario"));
+document.getElementById("btnEstadisticas").addEventListener("click", () => showView("vistaEstadisticas"));
+document.getElementById("btnCancelar").addEventListener("click", () => showView("vistaContactos"));
+
+// Sidebar functions
+function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    if (sidebarOpen) {
+    sidebar.style.transform = "translateX(0)";
+    sidebarOverlay.classList.remove("hidden");
+    } else {
+    closeSidebar();
+    }
+}
+
+function closeSidebar() {
+    sidebarOpen = false;
+    sidebar.style.transform = "translateX(-100%)";
+    sidebarOverlay.classList.add("hidden");
+}
+
+// View management
+function showView(viewId) {
+    // Hide all views
+    document.querySelectorAll(".view-content").forEach(view => {
+    view.classList.add("hidden");
+    });
+    
+    // Show selected view
+    document.getElementById(viewId).classList.remove("hidden");
+    
+    // Update navigation
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.classList.remove("active", "bg-blue-50", "text-blue-600");
+    btn.classList.add("text-gray-700");
+    });
+    
+    // Highlight active button
+    if (viewId === "vistaContactos") {
+    document.getElementById("btnTodosContactos").classList.add("active", "bg-blue-50", "text-blue-600");
+    } else if (viewId === "vistaFormulario") {
+    document.getElementById("btnFormulario").classList.add("active", "bg-blue-50", "text-blue-600");
+    } else if (viewId === "vistaEstadisticas") {
+    document.getElementById("btnEstadisticas").classList.add("active", "bg-blue-50", "text-blue-600");
+    updateStats();
+    }
+    
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth < 768) {
+    closeSidebar();
+    }
+}
+
+// Load contacts on page load
+cargarContactosDesdeBackend();
+
+// Form submission
+form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const nombre = document.getElementById("nombre").value;
+    const correo = document.getElementById("correo").value;
+    const codigo = document.getElementById("codigoPais").value;
+    const telefono = document.getElementById("telefono").value;
+    const linkedin = document.getElementById("linkedin").value;
+
+    const data = {
+    nombre,
+    correo,
+    telefono: `${codigo} ${telefono}`,
+    linkedin,
+    fecha: new Date().toISOString()
+    };
+
+    try {
+    const res = await fetch("https://contactbook-backend-9ei1.onrender.com/api/contacto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    if (res.ok) {
+        contactos.unshift(data);
+        renderTabla();
+        updateContactCount();
+        form.reset();
+        showView("vistaContactos");
+        
+        // Show success message
+        showNotification("Contacto agregado exitosamente", "success");
+    } else {
+        showNotification("Error al guardar el contacto", "error");
+    }
+    } catch (err) {
+    console.error("Error:", err);
+    showNotification("No se pudo conectar con el servidor", "error");
+    }
+});
+
+// Search functionality
+buscador.addEventListener("input", function () {
+    renderTabla(this.value.toLowerCase());
+});
+
+// Table rendering
+function renderTabla(filtro = "") {
+    const contactosFiltrados = contactos.filter(c =>
+    c.nombre.toLowerCase().includes(filtro) ||
+    c.correo.toLowerCase().includes(filtro) ||
+    c.telefono.toLowerCase().includes(filtro)
+    );
+
+    tabla.innerHTML = "";
+
+    if (contactosFiltrados.length === 0 && contactos.length > 0) {
+    tabla.innerHTML = `
+        <tr>
+        <td colspan="5" class="text-center py-8 text-gray-500">
+            <i data-lucide="search" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
+            <p>No se encontraron contactos que coincidan con la búsqueda</p>
+        </td>
+        </tr>
+    `;
+    lucide.createIcons();
+    return;
+    }
+
+    contactosFiltrados.forEach(c => {
+    const row = document.createElement("tr");
+    row.className = "hover:bg-gray-50 transition-colors";
+    
+    const fecha = new Date(c.fecha);
+    const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+
+    row.innerHTML = `
+        <td class="p-4 text-sm text-gray-600">${fechaFormateada}</td>
+        <td class="p-4 font-medium text-gray-800">${c.nombre}</td>
+        <td class="p-4 text-sm text-gray-600">${c.correo}</td>
+        <td class="p-4 text-sm text-gray-600">${c.telefono}</td>
+        <td class="p-4">
+        ${c.linkedin ? 
+            `<a href="${c.linkedin}" class="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm" target="_blank">
+            <i data-lucide="external-link" class="w-3 h-3"></i>
+            <span>Ver perfil</span>
+            </a>` : 
+            '<span class="text-gray-400 text-sm">-</span>'
+        }
+        </td>
+    `;
+    tabla.appendChild(row);
+    });
+
+    // Reinitialize icons
+    lucide.createIcons();
+}
+
+// Load contacts from backend
+async function cargarContactosDesdeBackend() {
+    const loader = document.getElementById("loader");
+    const errorMsg = document.getElementById("errorMsg");
+    const noContactsMsg = document.getElementById("noContactsMsg");
+
+    loader.classList.remove("hidden");
+    errorMsg.classList.add("hidden");
+    noContactsMsg.classList.add("hidden");
+
+    try {
+    const res = await fetch("https://contactbook-backend-9ei1.onrender.com/api/contactos");
+    if (res.ok) {
+        contactos = await res.json();
+        
+        if (contactos.length === 0) {
+        noContactsMsg.classList.remove("hidden");
+        } else {
+        renderTabla();
+        }
+        updateContactCount();
+    } else {
+        console.error("No se pudieron cargar los contactos");
+        errorMsg.classList.remove("hidden");
+    }
+    } catch (err) {
+    console.error("Error de conexión al backend:", err);
+    errorMsg.classList.remove("hidden");
+    } finally {
+    loader.classList.add("hidden");
+    }
+}
+
+// Update contact count
+function updateContactCount() {
+    const count = contactos.length;
+    document.getElementById("contactCount").textContent = `${count} contacto${count !== 1 ? 's' : ''}`;
+}
+
+// Update statistics
+function updateStats() {
+    const total = contactos.length;
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    
+    const esteMes = contactos.filter(c => new Date(c.fecha) >= inicioMes).length;
+    const conLinkedIn = contactos.filter(c => c.linkedin && c.linkedin.trim() !== '').length;
+
+    document.getElementById("statTotalContactos").textContent = total;
+    document.getElementById("statEsteMes").textContent = esteMes;
+    document.getElementById("statConLinkedIn").textContent = conLinkedIn;
+}
+
+// Notification system
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 ${
+    type === 'success' ? 'bg-green-500 text-white' : 
+    type === 'error' ? 'bg-red-500 text-white' : 
+    'bg-blue-500 text-white'
+    }`;
+    
+    notification.innerHTML = `
+    <div class="flex items-center space-x-2">
+        <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info'}" class="w-4 h-4"></i>
+        <span class="text-sm">${message}</span>
+    </div>
+    `;
+    
+    document.body.appendChild(notification);
+    lucide.createIcons();
+    
+    // Show notification
+    setTimeout(() => {
+    notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Hide notification
+    setTimeout(() => {
+    notification.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+        document.body.removeChild(notification);
+    }, 300);
+    }, 3000);
+}
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    if (window.innerWidth >= 768 && sidebarOpen) {
+    // Keep sidebar open on desktop
+    } else if (window.innerWidth < 768 && sidebarOpen) {
+    // Close sidebar on mobile
+    closeSidebar();
+    }
+});
