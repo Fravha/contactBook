@@ -1,13 +1,28 @@
 // js/ui.js
 import { formatFecha } from './utils.js';
+let paginaActual = 1;
+const contactosPorPagina = 10;
+let últimosContactosFiltrados = [];
+let últimoFiltro = "";
 
 export function renderTabla(contactos, filtro = "") {
+  últimosContactosFiltrados = contactos;
+  últimoFiltro = filtro;
   const tabla = document.getElementById("tablaContactos");
+  const paginacionContainer = document.getElementById("paginacion");
+
   const resultados = contactos.filter(c =>
     c.nombre.toLowerCase().includes(filtro) ||
     c.correo.toLowerCase().includes(filtro) ||
     c.telefono.toLowerCase().includes(filtro)
   );
+
+  const totalPaginas = Math.ceil(resultados.length / contactosPorPagina);
+  if (paginaActual > totalPaginas) paginaActual = totalPaginas || 1;
+
+  const inicio = (paginaActual - 1) * contactosPorPagina;
+  const fin = inicio + contactosPorPagina;
+  const paginaResultados = resultados.slice(inicio, fin);
 
   tabla.innerHTML = "";
 
@@ -19,7 +34,7 @@ export function renderTabla(contactos, filtro = "") {
     return;
   }
 
-  resultados.forEach(c => {
+  paginaResultados.forEach(c => {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-gray-50 transition-colors";
     tr.innerHTML = `
@@ -34,7 +49,28 @@ export function renderTabla(contactos, filtro = "") {
     tabla.appendChild(tr);
   });
 
+  renderPaginacion(totalPaginas);
   lucide.createIcons();
+}
+
+function renderPaginacion(totalPaginas) {
+  const container = document.getElementById("paginacion");
+  container.innerHTML = "";
+
+  if (totalPaginas <= 1) return;
+
+  for (let i = 1; i <= totalPaginas; i++) {
+    const btn = document.createElement("button");
+    btn.textContent = i;
+    btn.className = `px-3 py-1 mx-1 rounded ${
+      i === paginaActual ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+    }`;
+    btn.addEventListener("click", () => {
+      paginaActual = i;
+      renderTabla(últimosContactosFiltrados, últimoFiltro); // estos deben ser variables globales o pasarlos
+    });
+    container.appendChild(btn);
+  }
 }
 
 export function updateStats(contactos) {
