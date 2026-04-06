@@ -1,5 +1,5 @@
 // js/ui.js
-import { formatFecha } from './utils.js';
+import { formatFecha, formatCumpleanos } from './utils.js';
 let paginaActual = 1;
 const contactosPorPagina = 10;
 let últimosContactosFiltrados = [];
@@ -27,7 +27,7 @@ export function renderTabla(contactos, filtro = "") {
   tabla.innerHTML = "";
 
   if (resultados.length === 0 && contactos.length > 0) {
-    tabla.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">
+    tabla.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">
       <i data-lucide="search" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
       <p>No se encontraron contactos</p></td></tr>`;
     lucide.createIcons();
@@ -42,6 +42,7 @@ export function renderTabla(contactos, filtro = "") {
       <td class="p-4 font-medium text-gray-800">${c.nombre}</td>
       <td class="p-4 text-sm text-gray-600">${c.correo}</td>
       <td class="p-4 text-sm text-gray-600">${c.telefono}</td>
+      <td class="p-4 text-sm text-gray-600">${formatCumpleanos(c.cumpleanos)}</td>
       <td class="p-4">
         ${c.linkedin ? `<a href="${c.linkedin}" class="text-blue-600 hover:underline text-sm" target="_blank">
           Ver perfil</a>` : `<span class="text-gray-400 text-sm">-</span>`}
